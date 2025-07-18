@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Meta Cambistas</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background-color: #f9f9f9; }
+    label { margin-right: 10px; }
+    input, select { padding: 5px; margin-right: 10px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    th { background-color: #eee; }
+    button { padding: 8px 14px; cursor: pointer; }
+    form { display: inline-block; margin-left: 10px; }
+    .form-section { margin-top: 30px; border-top: 1px solid #ccc; padding-top: 20px; }
+    .totais-gerais { margin-top: 40px; font-weight: bold; font-size: 18px; }
+  </style>
+</head>
+<body>
+
+<h1>Cadastro de Meta Cambistas</h1>
+
+<div>
+  <label>Apurado (R$): <input type="number" id="apurado" min="0" /></label>
+  <label>Código do Cambista: 
+    <input type="text" id="codigo" onblur="validarCodigo()" />
+  </label>
+
+  <button onclick="adicionarMeta()">Adicionar</button>
+
+  <form method="POST" action="/exportar-word-meta" onsubmit="return prepararExportacao()">
+    <textarea name="conteudo" id="conteudo-exportar" style="display:none;"></textarea>
+    <button type="submit">Exportar Tudo para Word</button>
+  </form>
+</div>
+
+<div id="tabelas-container"></div>
+<div id="totais-gerais" class="totais-gerais"></div>
+
+<div class="form-section">
+  <h2>Adicionar Novo Cambista</h2>
+  <label>Área:
+    <select id="nova-area"></select>
+    <button onclick="criarNovaArea()">Criar Nova Área</button>
+  </label>
+  <label>Nome: <input type="text" id="novo-nome" /></label>
+  <label>Código: <input type="text" id="novo-codigo" /></label>
+  <button onclick="adicionarCambista()">Salvar Cambista</button>
+</div>
+
+<script>
+  const cambistasData = {
+    Maragogi: {
+      "2122": { nome: "DINHO VARZEA" },
+      "2023": { nome: "MEL BARREIROS" },
+      "2025": { nome: "CELSON SIRIAEM" },
+      "2158": { nome: "RUAN" }
+    },
+    Barreiro: {
+      "2026": { nome: "CURUCA" },
+      "2040": { nome: "Rodrigo Tamanda" },
+      "2048": { nome: "BRASILINA TAMAN" },
+      "2053": { nome: "RO SIRIAEM" },
+      "2054": { nome: "wilson" }
+    }
+  };
+
+  const metaDataStore = [];
+
+  function encontrarAreaPorCodigo(codigo) {
+    for (const area in cambistasData) {
+      if (cambistasData[area][codigo]) return area;
+    }
+    return null;
+  }
+
+  function validarCodigo() {
+    const codigo = document.getElementById('codigo').value.trim().replace(/^0+/, '');
+    const area = encontrarAreaPorCodigo(codigo);
+    if (!area) {
+      alert('Código de cambista não encontrado!');
+    }
+  }
+
+  function adicionarCambista() {
+    const area = document.getElementById('nova-area').value;
+    const nome = document.getElementById('novo-nome').value.trim();
+    const codigoRaw = document.getElementById('novo-codigo').value.trim();
+    const codigo = codigoRaw.replace(/^0+/, '');
+
+    if (!nome || !codigo) {
+      alert('Preencha todos os campos corretamente!');
+      return;
+    }
+
+    if (!cambistasData[area]) cambistasData[area] = {};
+    cambistasData[area][codigo] = { nome };
+
+    alert('Cambista adicionado com sucesso!');
+    document.getElementById('novo-nome').value = '';
+    document.getElementById('novo-codigo').value = '';
+    renderizarTabelas();
+  }
+
+  function criarNovaArea() {
+    const novaArea = prompt("Digite o nome da nova área:");
+    if (!novaArea) return;
+
+    if (!cambistasData[novaArea]) {
+      cambistasData[novaArea] = {};
+      atualizarSelectAreas();
+      renderizarTabelas();
+      alert(`Área "${novaArea}" criada com sucesso!`);
+    } else {
+      alert("Área já existe.");
+    }
+  }
+
+  function atualizarSelectAreas() {
+    const select = document.getElementById('nova-area');
+    select.innerHTML = '';
+    Object.keys(cambistasData).forEach(area => {
+      const option = document.createElement('option');
+      option.value = area;
+      option.textContent = area;
+      select.appendChild(option);
+    });
+  }
+
+  function calcularValorAReceber(apurado) {
+    if (apurado >= 400 && apurado <= 699) return 50;
+    if (apurado >= 700 && apurado <= 1099) return 100;
+    if (apurado >= 1100 && apurado <= 1499) return 150;
+    if (apurado >= 1500 && apurado <= 1999) return 200;
+    if (apurado >= 2000) return 250;
+    return 0;
+  }
+
+  function adicionarMeta() {
+    const apurado = parseFloat(document.getElementById('apurado').value);
+    const codigoRaw = document.getElementById('codigo').value.trim();
+    const codigo = codigoRaw.replace(/^0+/, '');
+
+    const area = encontrarAreaPorCodigo(codigo);
+    if (!area) {
+      alert('Código de cambista não encontrado!');
+      return;
+    }
+
+    if (!codigo || isNaN(apurado) || apurado < 0) {
+      alert('Preencha todos os campos corretamente!');
+      return;
+    }
+
+    const nome = cambistasData[area][codigo].nome || 'N/A';
+    const valorReceber = calcularValorAReceber(apurado);
+
+    metaDataStore.push({ area, apurado, valorReceber, nome, codigo });
+    atualizarTabelas();
+    limparCampos();
+  }
+
+  function apagarMeta(index) {
+    metaDataStore.splice(index, 1);
+    atualizarTabelas();
+  }
+
+  function atualizarTabelas() {
+    const container = document.getElementById('tabelas-container');
+    container.innerHTML = '';
+
+    let totalGeralApurado = 0;
+    let totalGeralReceber = 0;
+
+    Object.keys(cambistasData).forEach(area => {
+      const areaData = metaDataStore.filter(item => item.area === area);
+      if (areaData.length === 0) return;
+
+      const section = document.createElement('section');
+      const h2 = document.createElement('h2');
+      h2.textContent = area;
+      section.appendChild(h2);
+
+      const table = document.createElement('table');
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Nome</th>
+            <th>Apurado (R$)</th>
+            <th>Valor a Receber (R$)</th>
+            <th>Ação</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+        <tfoot>
+          <tr>
+            <th colspan="2">Totais</th>
+            <th id="total-apurado">R$ 0,00</th>
+            <th id="total-receber">R$ 0,00</th>
+            <th></th>
+          </tr>
+        </tfoot>
+      `;
+
+      const tbody = table.querySelector('tbody');
+      let totalApurado = 0;
+      let totalReceber = 0;
+
+      areaData.forEach((item, index) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${item.codigo}</td>
+          <td>${item.nome}</td>
+          <td>R$ ${item.apurado.toFixed(2)}</td>
+          <td>R$ ${item.valorReceber.toFixed(2)}</td>
+          <td><button onclick="apagarMeta(${metaDataStore.indexOf(item)})">Apagar</button></td>
+        `;
+        totalApurado += item.apurado;
+        totalReceber += item.valorReceber;
+        tbody.appendChild(tr);
+      });
+
+      totalGeralApurado += totalApurado;
+      totalGeralReceber += totalReceber;
+
+      table.querySelector('#total-apurado').textContent = `R$ ${totalApurado.toFixed(2)}`;
+      table.querySelector('#total-receber').textContent = `R$ ${totalReceber.toFixed(2)}`;
+
+      section.appendChild(table);
+      container.appendChild(section);
+    });
+
+    const totaisDiv = document.getElementById('totais-gerais');
+    totaisDiv.innerHTML = `
+      Total Geral Apurado: R$ ${totalGeralApurado.toFixed(2)}<br>
+      Total Geral a Receber: R$ ${totalGeralReceber.toFixed(2)}
+    `;
+  }
+
+  function prepararExportacao() {
+    let html = '';
+    const areas = Object.keys(cambistasData);
+
+    areas.forEach(area => {
+      const areaData = metaDataStore.filter(item => item.area === area);
+      if (areaData.length === 0) return;
+
+      html += `<h2>${area}</h2>`;
+      html += `
+        <table border="1" cellspacing="0" cellpadding="4">
+          <tr>
+            <th>Código</th>
+            <th>Nome</th>
+            <th>Apurado (R$)</th>
+            <th>Valor a Receber (R$)</th>
+          </tr>
+      `;
+
+      let totalApurado = 0;
+      let totalReceber = 0;
+
+      areaData.forEach(item => {
+        html += `
+          <tr>
+            <td>${item.codigo}</td>
+            <td>${item.nome}</td>
+            <td>R$ ${item.apurado.toFixed(2)}</td>
+            <td>R$ ${item.valorReceber.toFixed(2)}</td>
+          </tr>
+        `;
+        totalApurado += item.apurado;
+        totalReceber += item.valorReceber;
+      });
+
+      html += `
+        <tr>
+          <td colspan="2"><strong>Totais</strong></td>
+          <td><strong>R$ ${totalApurado.toFixed(2)}</strong></td>
+          <td><strong>R$ ${totalReceber.toFixed(2)}</strong></td>
+        </tr>
+      </table><br>`;
+    });
+
+    const totalGeralApurado = metaDataStore.reduce((acc, cur) => acc + cur.apurado, 0);
+    const totalGeralReceber = metaDataStore.reduce((acc, cur) => acc + cur.valorReceber, 0);
+
+    html += `
+      <h2>Total Geral</h2>
+      <p><strong>Apurado:</strong> R$ ${totalGeralApurado.toFixed(2)}<br>
+      <strong>Valor a Receber:</strong> R$ ${totalGeralReceber.toFixed(2)}</p>
+    `;
+
+    document.getElementById('conteudo-exportar').value = html;
+    return true;
+  }
+
+  function limparCampos() {
+    document.getElementById('apurado').value = '';
+    document.getElementById('codigo').value = '';
+  }
+
+  function renderizarTabelas() {
+    atualizarTabelas();
+  }
+
+  atualizarSelectAreas();
+  renderizarTabelas();
+</script>
+
+</body>
+</html>

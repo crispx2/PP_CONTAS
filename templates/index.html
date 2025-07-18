@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Tabelas por Área - Cambistas</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4; }
+    section { margin-bottom: 40px; background: #fff; padding: 15px; border-radius: 6px; box-shadow: 0 0 8px rgba(0,0,0,0.1); }
+    h2 { margin-bottom: 10px; text-transform: uppercase; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    input, select, button { margin: 6px 6px 6px 0; padding: 8px; font-size: 14px; }
+    button { cursor: pointer; }
+    .btn-apagar { background: #e74c3c; color: white; border: none; border-radius: 4px; }
+    .btn-apagar:hover { background-color: #c0392b; }
+    .total { margin-top: 10px; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+<h1>Cadastro e Tabelas por Área - Cambistas</h1>
+
+<!-- Formulário principal -->
+<div>
+  <label>Código: <input type="text" id="codigo" /></label>
+  <label>Comissão (R$): <input type="number" id="comissao" min="0" /></label>
+  <label>Valor a Bater (R$): <input type="number" id="valor_a_bater" value="150" min="0" /></label>
+  <label>Área:
+    <select id="area"></select>
+  </label>
+  <button onclick="adicionarLinha()">Adicionar Linha</button>
+
+  <form method="POST" action="/exportar-word" style="display: inline;">
+    <button type="submit">Exportar Tudo para Word</button>
+  </form>
+</div>
+
+<hr />
+
+<!-- Container para as tabelas por área -->
+<div id="tabelas-container"></div>
+
+<!-- Cadastro de Cambista -->
+<h2>Cadastro de Cambista</h2>
+<div>
+  <label>Área:
+    <select id="nova-area"></select>
+  </label>
+  <label>Código: <input type="text" id="novo-codigo" /></label>
+  <label>Nome: <input type="text" id="novo-nome" /></label>
+  <button onclick="cadastrarCambista()">Salvar Cambista</button>
+  <button onclick="criarNovaArea()">Criar Nova Área</button>
+</div>
+
+<script>
+  const areas = ["Palmeira dos Índio"];
+  const dadosPorArea = { "Palmeira dos Índio": [] };
+  const cambistasPorArea = { "Palmeira dos Índio": {} };
+
+  function preencherSelectAreas() {
+    const selects = [document.getElementById("area"), document.getElementById("nova-area")];
+    selects.forEach(select => {
+      select.innerHTML = "";
+      areas.forEach(area => {
+        const option = document.createElement("option");
+        option.value = area;
+        option.textContent = area;
+        select.appendChild(option);
+      });
+    });
+  }
+
+  function criarNovaArea() {
+    const nova = prompt("Digite o nome da nova área:");
+    if (nova && !areas.includes(nova)) {
+      areas.push(nova);
+      dadosPorArea[nova] = [];
+      cambistasPorArea[nova] = {};
+      preencherSelectAreas();
+      renderizarTabelas();
+    }
+  }
+
+  function cadastrarCambista() {
+    const area = document.getElementById("nova-area").value;
+    const codigo = document.getElementById("novo-codigo").value.trim();
+    const nome = document.getElementById("novo-nome").value.trim();
+
+    if (!codigo || !nome || !area) {
+      alert("Preencha todos os campos do cambista.");
+      return;
+    }
+
+    if (!cambistasPorArea[area]) cambistasPorArea[area] = {};
+    cambistasPorArea[area][codigo] = nome;
+
+    alert("Cambista cadastrado com sucesso!");
+    document.getElementById("novo-codigo").value = '';
+    document.getElementById("novo-nome").value = '';
+  }
+
+  function adicionarLinha() {
+    const area = document.getElementById("area").value;
+    const codigo = document.getElementById("codigo").value.trim();
+    const comissao = parseFloat(document.getElementById("comissao").value);
+    const valorBater = parseFloat(document.getElementById("valor_a_bater").value);
+
+    if (!codigo || isNaN(comissao) || isNaN(valorBater)) {
+      alert("Preencha todos os campos corretamente.");
+      return;
+    }
+
+    if (!cambistasPorArea[area] || !cambistasPorArea[area][codigo]) {
+      alert("Código não cadastrado para esta área. Cadastre o cambista antes de continuar.");
+      return;
+    }
+
+    const nome = cambistasPorArea[area][codigo];
+    const complemento = valorBater - comissao;
+    if (!dadosPorArea[area]) dadosPorArea[area] = [];
+
+    dadosPorArea[area].push({ codigo, nome, comissao, complemento });
+    renderizarTabelas();
+    limparCampos();
+  }
+
+  function apagarLinha(area, index) {
+    dadosPorArea[area].splice(index, 1);
+    renderizarTabelas();
+  }
+
+  function renderizarTabelas() {
+    const container = document.getElementById("tabelas-container");
+    container.innerHTML = "";
+
+    areas.forEach(area => {
+      if (!dadosPorArea[area] || dadosPorArea[area].length === 0) return;
+
+      const section = document.createElement("section");
+      const h2 = document.createElement("h2");
+      h2.textContent = area;
+      section.appendChild(h2);
+
+      const table = document.createElement("table");
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Nome</th>
+            <th>Comissão (R$)</th>
+            <th>Complemento de Dezena (R$)</th>
+            <th>Ação</th>
+          </tr>
+        </thead>
+        <tbody></tbody>`;
+
+      const tbody = table.querySelector("tbody");
+      let totalComissao = 0;
+      let totalComplemento = 0;
+
+      dadosPorArea[area].forEach((dado, index) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${dado.codigo}</td>
+          <td>${dado.nome}</td>
+          <td>R$ ${dado.comissao.toFixed(2)}</td>
+          <td>R$ ${dado.complemento.toFixed(2)}</td>
+          <td><button class="btn-apagar" onclick="apagarLinha('${area}', ${index})">Apagar</button></td>`;
+        tbody.appendChild(tr);
+        totalComissao += dado.comissao;
+        totalComplemento += dado.complemento;
+      });
+
+      section.appendChild(table);
+
+      const totalDiv = document.createElement("div");
+      totalDiv.className = "total";
+      totalDiv.innerHTML = `Total Comissão: R$ ${totalComissao.toFixed(2)}<br>Total Complemento: R$ ${totalComplemento.toFixed(2)}`;
+      section.appendChild(totalDiv);
+
+      container.appendChild(section);
+    });
+  }
+
+  function limparCampos() {
+    document.getElementById("codigo").value = '';
+    document.getElementById("comissao").value = '';
+    document.getElementById("valor_a_bater").value = 150;
+  }
+
+  preencherSelectAreas();
+  renderizarTabelas();
+</script>
+
+</body>
+</html>
