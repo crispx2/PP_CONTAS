@@ -13,6 +13,7 @@
     button { padding: 8px 14px; cursor: pointer; }
     form { display: inline-block; margin-left: 10px; }
     .form-section { margin-top: 30px; border-top: 1px solid #ccc; padding-top: 20px; }
+    .total-row { font-weight: bold; background-color: #f1f1f1; }
   </style>
 </head>
 <body>
@@ -179,10 +180,10 @@
       table.innerHTML = `
         <thead>
           <tr>
+            <th>Código</th>
+            <th>Nome</th>
             <th>Apurado (R$)</th>
             <th>Valor a Receber (R$)</th>
-            <th>Nome</th>
-            <th>Código</th>
             <th>Ação</th>
           </tr>
         </thead>
@@ -190,17 +191,30 @@
       `;
 
       const tbody = table.querySelector('tbody');
+      let totalValorReceber = 0;
+
       areaData.forEach((item, index) => {
+        totalValorReceber += item.valorReceber;
         const tr = document.createElement('tr');
         tr.innerHTML = `
+          <td>${item.codigo}</td>
+          <td>${item.nome}</td>
           <td>R$ ${item.apurado.toFixed(2)}</td>
           <td>R$ ${item.valorReceber.toFixed(2)}</td>
-          <td>${item.nome}</td>
-          <td>${item.codigo}</td>
           <td><button onclick="apagarMeta(${index})">Apagar</button></td>
         `;
         tbody.appendChild(tr);
       });
+
+      // Adiciona linha de total do valor a receber
+      const trTotal = document.createElement('tr');
+      trTotal.classList.add('total-row');
+      trTotal.innerHTML = `
+        <td colspan="3">TOTAL A RECEBER</td>
+        <td>R$ ${totalValorReceber.toFixed(2)}</td>
+        <td></td>
+      `;
+      tbody.appendChild(trTotal);
 
       section.appendChild(table);
       container.appendChild(section);
