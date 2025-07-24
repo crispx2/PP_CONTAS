@@ -13,7 +13,6 @@
     button { padding: 8px 14px; cursor: pointer; }
     form { display: inline-block; margin-left: 10px; }
     .form-section { margin-top: 30px; border-top: 1px solid #ccc; padding-top: 20px; }
-    .totais-gerais { margin-top: 40px; font-weight: bold; font-size: 18px; }
   </style>
 </head>
 <body>
@@ -28,14 +27,12 @@
 
   <button onclick="adicionarMeta()">Adicionar</button>
 
-  <form method="POST" action="/exportar-word-meta" onsubmit="return prepararExportacao()">
-    <textarea name="conteudo" id="conteudo-exportar" style="display:none;"></textarea>
+  <form method="POST" action="/exportar-word-meta">
     <button type="submit">Exportar Tudo para Word</button>
   </form>
 </div>
 
 <div id="tabelas-container"></div>
-<div id="totais-gerais" class="totais-gerais"></div>
 
 <div class="form-section">
   <h2>Adicionar Novo Cambista</h2>
@@ -169,9 +166,6 @@
     const container = document.getElementById('tabelas-container');
     container.innerHTML = '';
 
-    let totalGeralApurado = 0;
-    let totalGeralReceber = 0;
-
     Object.keys(cambistasData).forEach(area => {
       const areaData = metaDataStore.filter(item => item.area === area);
       if (areaData.length === 0) return;
@@ -185,123 +179,37 @@
       table.innerHTML = `
         <thead>
           <tr>
-            <th>Código</th>
-            <th>Nome</th>
             <th>Apurado (R$)</th>
             <th>Valor a Receber (R$)</th>
+            <th>Nome</th>
+            <th>Código</th>
             <th>Ação</th>
           </tr>
         </thead>
         <tbody></tbody>
-        <tfoot>
-          <tr>
-            <th colspan="2">Totais</th>
-            <th id="total-apurado">R$ 0,00</th>
-            <th id="total-receber">R$ 0,00</th>
-            <th></th>
-          </tr>
-        </tfoot>
       `;
 
       const tbody = table.querySelector('tbody');
-      let totalApurado = 0;
-      let totalReceber = 0;
-
       areaData.forEach((item, index) => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td>${item.codigo}</td>
-          <td>${item.nome}</td>
           <td>R$ ${item.apurado.toFixed(2)}</td>
           <td>R$ ${item.valorReceber.toFixed(2)}</td>
-          <td><button onclick="apagarMeta(${metaDataStore.indexOf(item)})">Apagar</button></td>
+          <td>${item.nome}</td>
+          <td>${item.codigo}</td>
+          <td><button onclick="apagarMeta(${index})">Apagar</button></td>
         `;
-        totalApurado += item.apurado;
-        totalReceber += item.valorReceber;
         tbody.appendChild(tr);
       });
-
-      totalGeralApurado += totalApurado;
-      totalGeralReceber += totalReceber;
-
-      table.querySelector('#total-apurado').textContent = `R$ ${totalApurado.toFixed(2)}`;
-      table.querySelector('#total-receber').textContent = `R$ ${totalReceber.toFixed(2)}`;
 
       section.appendChild(table);
       container.appendChild(section);
     });
-
-    const totaisDiv = document.getElementById('totais-gerais');
-    totaisDiv.innerHTML = `
-      Total Geral Apurado: R$ ${totalGeralApurado.toFixed(2)}<br>
-      Total Geral a Receber: R$ ${totalGeralReceber.toFixed(2)}
-    `;
-  }
-
-  function prepararExportacao() {
-    let html = '';
-    const areas = Object.keys(cambistasData);
-
-    areas.forEach(area => {
-      const areaData = metaDataStore.filter(item => item.area === area);
-      if (areaData.length === 0) return;
-
-      html += `<h2>${area}</h2>`;
-      html += `
-        <table border="1" cellspacing="0" cellpadding="4">
-          <tr>
-            <th>Código</th>
-            <th>Nome</th>
-            <th>Apurado (R$)</th>
-            <th>Valor a Receber (R$)</th>
-          </tr>
-      `;
-
-      let totalApurado = 0;
-      let totalReceber = 0;
-
-      areaData.forEach(item => {
-        html += `
-          <tr>
-            <td>${item.codigo}</td>
-            <td>${item.nome}</td>
-            <td>R$ ${item.apurado.toFixed(2)}</td>
-            <td>R$ ${item.valorReceber.toFixed(2)}</td>
-          </tr>
-        `;
-        totalApurado += item.apurado;
-        totalReceber += item.valorReceber;
-      });
-
-      html += `
-        <tr>
-          <td colspan="2"><strong>Totais</strong></td>
-          <td><strong>R$ ${totalApurado.toFixed(2)}</strong></td>
-          <td><strong>R$ ${totalReceber.toFixed(2)}</strong></td>
-        </tr>
-      </table><br>`;
-    });
-
-    const totalGeralApurado = metaDataStore.reduce((acc, cur) => acc + cur.apurado, 0);
-    const totalGeralReceber = metaDataStore.reduce((acc, cur) => acc + cur.valorReceber, 0);
-
-    html += `
-      <h2>Total Geral</h2>
-      <p><strong>Apurado:</strong> R$ ${totalGeralApurado.toFixed(2)}<br>
-      <strong>Valor a Receber:</strong> R$ ${totalGeralReceber.toFixed(2)}</p>
-    `;
-
-    document.getElementById('conteudo-exportar').value = html;
-    return true;
   }
 
   function limparCampos() {
     document.getElementById('apurado').value = '';
     document.getElementById('codigo').value = '';
-  }
-
-  function renderizarTabelas() {
-    atualizarTabelas();
   }
 
   atualizarSelectAreas();
