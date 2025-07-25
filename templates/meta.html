@@ -28,9 +28,8 @@
 
   <button onclick="adicionarMeta()">Adicionar</button>
 
-  <form method="POST" action="/exportar-word-meta">
-    <button type="submit">Exportar Tudo para Word</button>
-  </form>
+  <!-- Botão para abrir a guia de impressão -->
+  <button onclick="window.print()">Imprimir</button>
 </div>
 
 <div id="tabelas-container"></div>
@@ -206,7 +205,6 @@
         tbody.appendChild(tr);
       });
 
-      // Adiciona linha de total do valor a receber
       const trTotal = document.createElement('tr');
       trTotal.classList.add('total-row');
       trTotal.innerHTML = `
