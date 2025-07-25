@@ -13,22 +13,12 @@
     button { cursor: pointer; }
     .btn-apagar { background: #e74c3c; color: white; border: none; border-radius: 4px; }
     .btn-apagar:hover { background-color: #c0392b; }
-    .total { margin-top: 10px; font-weight: bold; }
 
     /* CSS para imprimir apenas as tabelas */
     @media print {
-      body * {
-        visibility: hidden;
-      }
-      #tabelas-container, #tabelas-container * {
-        visibility: visible;
-      }
-      #tabelas-container {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-      }
+      body * { visibility: hidden; }
+      #tabelas-container, #tabelas-container * { visibility: visible; }
+      #tabelas-container { position: absolute; left: 0; top: 0; width: 100%; }
     }
   </style>
 </head>
@@ -45,8 +35,6 @@
     <select id="area"></select>
   </label>
   <button onclick="adicionarLinha()">Adicionar Linha</button>
-
-  <!-- Botão para imprimir apenas as tabelas -->
   <button onclick="window.print()">Imprimir Tabelas</button>
 </div>
 
@@ -170,7 +158,6 @@
         <tbody></tbody>`;
 
       const tbody = table.querySelector("tbody");
-      let totalComissao = 0;
       let totalComplemento = 0;
 
       dadosPorArea[area].forEach((dado, index) => {
@@ -182,17 +169,17 @@
           <td>R$ ${dado.complemento.toFixed(2)}</td>
           <td><button class="btn-apagar" onclick="apagarLinha('${area}', ${index})">Apagar</button></td>`;
         tbody.appendChild(tr);
-        totalComissao += dado.comissao;
         totalComplemento += dado.complemento;
       });
 
+      // Linha de total de complemento
+      const totalRow = document.createElement("tr");
+      totalRow.innerHTML = `
+        <td colspan="3" style="text-align: right; font-weight: bold;">Total Complemento de Dezena:</td>
+        <td colspan="2" style="font-weight: bold;">R$ ${totalComplemento.toFixed(2)}</td>`;
+      tbody.appendChild(totalRow);
+
       section.appendChild(table);
-
-      const totalDiv = document.createElement("div");
-      totalDiv.className = "total";
-      totalDiv.innerHTML = `Total Comissão: R$ ${totalComissao.toFixed(2)}<br>Total Complemento: R$ ${totalComplemento.toFixed(2)}`;
-      section.appendChild(totalDiv);
-
       container.appendChild(section);
     });
   }
