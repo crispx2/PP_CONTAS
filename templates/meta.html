@@ -14,6 +14,22 @@
     form { display: inline-block; margin-left: 10px; }
     .form-section { margin-top: 30px; border-top: 1px solid #ccc; padding-top: 20px; }
     .total-row { font-weight: bold; background-color: #f1f1f1; }
+
+    /* Apenas imprime a tabela */
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #tabelas-container, #tabelas-container * {
+        visibility: visible;
+      }
+      #tabelas-container {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+      }
+    }
   </style>
 </head>
 <body>
