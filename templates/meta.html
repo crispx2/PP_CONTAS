@@ -112,7 +112,7 @@
     alert('Cambista adicionado com sucesso!');
     document.getElementById('novo-nome').value = '';
     document.getElementById('novo-codigo').value = '';
-    renderizarTabelas();
+    atualizarTabelas();
   }
 
   function criarNovaArea() {
@@ -122,7 +122,7 @@
     if (!cambistasData[novaArea]) {
       cambistasData[novaArea] = {};
       atualizarSelectAreas();
-      renderizarTabelas();
+      atualizarTabelas();
       alert(`Área "${novaArea}" criada com sucesso!`);
     } else {
       alert("Área já existe.");
@@ -168,7 +168,7 @@
     const nome = cambistasData[area][codigo].nome || 'N/A';
     const valorReceber = calcularValorAReceber(apurado);
 
-    metaDataStore.push({ area, apurado, valorReceber, nome, codigo });
+    metaDataStore.push({ apurado, valorReceber, nome, codigo });
     atualizarTabelas();
     limparCampos();
   }
@@ -182,57 +182,48 @@
     const container = document.getElementById('tabelas-container');
     container.innerHTML = '';
 
-    Object.keys(cambistasData).forEach(area => {
-      const areaData = metaDataStore.filter(item => item.area === area);
-      if (areaData.length === 0) return;
+    if (metaDataStore.length === 0) return;
 
-      const section = document.createElement('section');
-      const h2 = document.createElement('h2');
-      h2.textContent = area;
-      section.appendChild(h2);
+    const table = document.createElement('table');
+    table.innerHTML = `
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Nome</th>
+          <th>Apurado (R$)</th>
+          <th>Valor a Receber (R$)</th>
+          <th>Ação</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    `;
 
-      const table = document.createElement('table');
-      table.innerHTML = `
-        <thead>
-          <tr>
-            <th>Código</th>
-            <th>Nome</th>
-            <th>Apurado (R$)</th>
-            <th>Valor a Receber (R$)</th>
-            <th>Ação</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
+    const tbody = table.querySelector('tbody');
+    let totalGeral = 0;
+
+    metaDataStore.forEach((item, index) => {
+      totalGeral += item.valorReceber;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${item.codigo}</td>
+        <td>${item.nome}</td>
+        <td>R$ ${item.apurado.toFixed(2)}</td>
+        <td>R$ ${item.valorReceber.toFixed(2)}</td>
+        <td><button onclick="apagarMeta(${index})">Apagar</button></td>
       `;
-
-      const tbody = table.querySelector('tbody');
-      let totalValorReceber = 0;
-
-      areaData.forEach((item, index) => {
-        totalValorReceber += item.valorReceber;
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${item.codigo}</td>
-          <td>${item.nome}</td>
-          <td>R$ ${item.apurado.toFixed(2)}</td>
-          <td>R$ ${item.valorReceber.toFixed(2)}</td>
-          <td><button onclick="apagarMeta(${index})">Apagar</button></td>
-        `;
-        tbody.appendChild(tr);
-      });
-
-      const trTotal = document.createElement('tr');
-      trTotal.classList.add('total-row');
-      trTotal.innerHTML = `
-        <td colspan="3">TOTAL A RECEBER</td>
-        <td>R$ ${totalValorReceber.toFixed(2)}</td>
-        <td></td>
-      `;
-      tbody.appendChild(trTotal);
-
-      section.appendChild(table);
-      container.appendChild(section);
+      tbody.appendChild(tr);
     });
+
+    const trTotal = document.createElement('tr');
+    trTotal.classList.add('total-row');
+    trTotal.innerHTML = `
+      <td colspan="3">TOTAL GERAL A RECEBER</td>
+      <td>R$ ${totalGeral.toFixed(2)}</td>
+      <td></td>
+    `;
+    tbody.appendChild(trTotal);
+
+    container.appendChild(table);
   }
 
   function limparCampos() {
@@ -241,7 +232,7 @@
   }
 
   atualizarSelectAreas();
-  renderizarTabelas();
+  atualizarTabelas();
 </script>
 
 </body>
